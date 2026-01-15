@@ -9,7 +9,7 @@ const auth = require("../middleware/auth.middleware");
 // console.log("typeof auth:", typeof auth);
 
 
-router.get("/places/search", auth.protect, searchPlaces); // ✅ Use auth.protect
+router.get("/places/search", auth.protect, searchPlaces); 
 
 
 

@@ -8,6 +8,15 @@ const generateOTP = () =>
   Math.floor(100000 + Math.random() * 900000).toString();
 
 /* ================= REGISTER ================= */
+
+      
+
+
+
+
+
+
+
 exports.register = async (req, res) => {
   try {
     let { name, email, password } = req.body;
@@ -31,12 +40,11 @@ exports.register = async (req, res) => {
     }
 
     const otp = generateOTP();
-    const hashedPassword = await bcrypt.hash(password, 10);
 
     const user = await User.create({
       name,
       email,
-      password: hashedPassword,
+      password,
       emailOTP: otp,
       emailOTPExpires: Date.now() + 10 * 60 * 1000,
     });
@@ -76,6 +84,16 @@ exports.register = async (req, res) => {
     });
   }
 };
+
+
+
+
+
+
+
+
+
+
 
 /* ================= VERIFY EMAIL ================= */
 exports.verifyEmail = async (req, res) => {

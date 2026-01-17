@@ -280,11 +280,11 @@ exports.forgotPassword = async (req, res) => {
 };
 
 /* ================= RESET PASSWORD ================= */
-exports.resetPassword = async (req, res) => {
+exports.changePassword = async (req, res) => {
   try {
     let { email, otp, newPassword } = req.body;
 
-    if (!email || !otp || !newPassword) {
+    if (!email || !newPassword) {
       return res.status(400).json({
         success: false,
         message: "All fields are required",

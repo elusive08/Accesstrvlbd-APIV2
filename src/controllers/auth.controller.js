@@ -280,7 +280,7 @@ exports.forgotPassword = async (req, res) => {
 };
 
 /* ================= RESET PASSWORD ================= */
-exports.changePassword = async (req, res) => {
+exports.resetPassword = async (req, res) => {
   try {
     let { email, otp, newPassword } = req.body;
 

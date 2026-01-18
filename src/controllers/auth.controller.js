@@ -1,11 +1,55 @@
 
+
+
+
+
+
+
+
+
+
 const User = require("../models/User");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
-const sendEmail = require("../utils/sendEmail");
+const sgMail = require('@sendgrid/mail');
+
+// Initialize SendGrid
+sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 
 const generateOTP = () =>
   Math.floor(100000 + Math.random() * 900000).toString();
+
+// Send OTP email function
+const sendOTPEmail = async (email, otp) => {
+  const msg = {
+    to: email,
+    from: process.env.SENDGRID_FROM_EMAIL,
+    subject: 'Your OTP Code - ACCESS-TRAVEL',
+    text: `Your OTP code is: ${otp}\n\nThis code will expire in 10 minutes.\n\nIf you didn't request this code, please ignore this email.`,
+    html: `
+      <div style="font-family: Arial, sans-serif; padding: 20px; max-width: 600px;">
+        <h2 style="color: #333;">Your OTP Code</h2>
+        <p>Your OTP code is:</p>
+        <div style="background: #f4f4f4; padding: 15px; text-align: center; border-radius: 5px;">
+          <span style="font-size: 32px; font-weight: bold; color: #007bff; letter-spacing: 5px;">${otp}</span>
+        </div>
+        <p style="margin-top: 20px;">This code will expire in <strong>10 minutes</strong>.</p>
+        <p style="color: #666; font-size: 14px;">If you didn't request this code, please ignore this email.</p>
+      </div>
+    `
+  };
+
+  try {
+    await sgMail.send(msg);
+    console.log('OTP email sent successfully to:', email);
+  } catch (error) {
+    console.error('SendGrid Error:', error);
+    if (error.response) {
+      console.error(error.response.body);
+    }
+    throw new Error('Failed to send OTP email');
+  }
+};
 
 /* ================= REGISTER ================= */
 exports.register = async (req, res) => {
@@ -31,24 +75,21 @@ exports.register = async (req, res) => {
     }
 
     const otp = generateOTP();
-    const hashedPassword = await bcrypt.hash(password, 10);
 
     const user = await User.create({
       name,
       email,
-      password: hashedPassword,
+      password,
       emailOTP: otp,
       emailOTPExpires: Date.now() + 10 * 60 * 1000,
     });
 
     try {
-      await sendEmail({
-        to: email,
-        subject: "Verify your email - ACCESS-TRAVEL",
-        text: `Your OTP is ${otp}. It expires in 10 minutes.`,
-      });
+      await sendOTPEmail(email, otp);
+      console.log("Verification email sent successfully");
     } catch (err) {
       console.error("Email failed:", err.message);
+      // Continue even if email fails - user can request resend
     }
 
     const token = jwt.sign(
@@ -59,7 +100,7 @@ exports.register = async (req, res) => {
 
     return res.status(201).json({
       success: true,
-      message: "Registration successful. Check your email for OTP.",
+      message: "Registration successful. Check your email or check your spam folder for OTP.",
       token,
       user: {
         id: user._id,
@@ -180,39 +221,6 @@ exports.login = async (req, res) => {
   }
 };
 
-
-
-exports.verifyEmail = async (req, res) => {
-  const { email, otp } = req.body;
-
-  const user = await User.findOne({
-    email: email.trim().toLowerCase(),
-    emailOTP: otp,
-    emailOTPExpires: { $gt: Date.now() }
-  });
-
-  if (!user) {
-    return res.status(400).json({
-      success: false,
-      message: "Invalid or expired OTP"
-    });
-  }
-
-  user.isEmailVerified = true;
-  user.emailOTP = undefined;
-  user.emailOTPExpires = undefined;
-  await user.save();
-
-  return res.json({
-    success: true,
-    message: "Email verified successfully"
-  });
-};
-
-
-
-
-
 /* ================= ME ================= */
 exports.me = async (req, res) => {
   return res.json({
@@ -241,11 +249,12 @@ exports.forgotPassword = async (req, res) => {
       user.resetPasswordExpires = Date.now() + 10 * 60 * 1000;
       await user.save();
 
-      await sendEmail({
-        to: email,
-        subject: "Password Reset OTP",
-        text: `Your OTP is ${otp}. It expires in 10 minutes.`,
-      });
+      try {
+        await sendOTPEmail(email, otp);
+      } catch (err) {
+        console.error("Password reset email failed:", err);
+        // Continue even if email fails
+      }
     }
 
     return res.json({
@@ -295,7 +304,7 @@ exports.resetPassword = async (req, res) => {
       });
     }
 
-    user.password = await bcrypt.hash(newPassword, 10);
+    user.password = newPassword;
     user.resetPasswordOTP = undefined;
     user.resetPasswordExpires = undefined;
     await user.save();

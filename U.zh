@@ -1,0 +1,1086 @@
+mongodb+srv://elusive:cap123@cluster1.ldooztx.mongodb.net/?appName=cluster1
+
+//     if (!user.isEmailVerified) {
+//       return res.status(403).json({
+//         success: false,
+//         message: "Please verify your email before logging in"
+//       });
+//     }
+//     const isMatch = await bcrypt.compare(password, user.password);
+
+//     if (!isMatch) {
+//       return res.status(401).json({
+//         success: false,
+//         message: "Invalid credentials"
+//       });
+//     }
+
+//     const token = jwt.sign(
+//       { id: user._id, role: user.role },
+//       process.env.JWT_SECRET,
+//       { expiresIn: "7d" }
+//     );
+
+//     return res.status(200).json({
+//       success: true,
+//       message: "Login successful",
+//       token,
+//       user: {
+//         id: user._id,
+//         name: user.name,
+//         email: user.email,
+//         role: user.role,
+//         isEmailVerified: user.isEmailVerified
+//       }
+//     });
+
+//   } catch (error) {
+//     console.error("Login error:", error);
+//     return res.status(500).json({
+//       success: false,
+//       message: "Login failed. Please try again."
+//     });
+//   }
+// };
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+exports.login = async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+
+
+
+
+
+
+    if (!email || !password) {
+      return res.status(400).json({
+        success: false,
+        message: "Email and password are required",
+      });
+    }
+
+    const normalizedEmail = email.trim().toLowerCase();
+    
+    console.log("Login attempt for:", normalizedEmail);
+console.log("Password from request:", password);
+    
+    
+    
+    
+    // Find user with password field
+    const user = await User.findOne({ email: normalizedEmail }).select("+password");
+  
+    if (!user) {
+      return res.status(401).json({
+        success: false,
+        message: "Invalid credentials"
+      });
+    }
+
+    // Check if email is verified
+    if (!user.isEmailVerified) {
+      return res.status(403).json({
+        success: false,
+        message: "Please verify your email before logging in"
+      });
+    }
+
+    // Check password
+
+    const trimmedPassword = password.trim();  // ✅ Already correct
+
+    
+        const isMatch = await bcrypt.compare(trimmedPassword, user.password);
+    
+    
+    if (!isMatch) {
+      return res.status(401).json({
+        success: false,
+        message: "Invalid credentials"
+      });
+    }
+
+    // Create token
+    const token = jwt.sign(
+      { id: user._id, role: user.role },
+      process.env.JWT_SECRET,
+      { expiresIn: "7d" }
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: "Login successful",
+      token,
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        isEmailVerified: user.isEmailVerified
+      }
+    });
+
+  } catch (error) {
+    console.error("Login error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Login failed. Please try again."
+    });
+  }
+};
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+exports.register = async (req, res) => {
+  try {
+    const { name, email, password } = req.body;
+
+
+
+
+
+
+    // Validate input
+    if (!name || !email || !password) {
+      return res.status(400).json({
+        success: false,
+        message: "Name, email and password are required",
+      });
+    }
+
+    // Normalize email
+    const normalizedEmail = email.trim().toLowerCase();
+
+
+    // Check if user already exists
+    const exists = await User.findOne({ email: normalizedEmail });
+    if (exists) {
+      return res.status(400).json({
+        success: false,
+        message: "Email already registered, try logging in"
+      });
+    }
+
+    // Hash password
+    // const hashedPassword = await bcrypt.hash(password.trim(), 10);
+
+const hashedPassword = await bcrypt.hash(password, 10); // ✅ No .trim()
+
+
+    // Generate OTP
+    const otp = generateOTP();
+
+    // Create user
+    const user = await User.create({
+      name: name.trim(),
+      email: normalizedEmail,
+      password: hashedPassword,
+      emailOTP: otp,
+      emailOTPExpires: Date.now() + 10 * 60 * 1000
+    });
+
+    // Send verification email
+    await sendEmail({
+      to: normalizedEmail,
+      subject: "Verify your email - ACCESS-TRAVEL NOREPLY",
+      text: `Your verification OTP is ${otp}. This code will expire in 10 minutes.`
+    });
+
+    // Generate token
+    const token = jwt.sign(
+      { id: user._id, role: user.role },
+      process.env.JWT_SECRET,
+      { expiresIn: "7d" }
+    );
+
+    return res.status(201).json({
+      success: true,
+      message: "Registration successful. Please check your email to verify your account.",
+      token,
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role
+      }
+    });
+
+  } catch (error) {
+    console.error("Registration error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Registration failed. Please try again."
+    });
+  }
+};
+
+
+
+
+
+  
+    const otp = generateOTP();
+
+    const user = await User.create({
+      name: name.trim(),
+      email: normalizedEmail,
+      password: password,  // ore plain password, model will hash it
+      emailOTP: otp,
+      emailOTPExpires: Date.now() + 10 * 60 * 1000
+    });
+
+    await sendEmail({
+      to: normalizedEmail,
+      subject: "Verify your email - ACCESS-TRAVEL NOREPLY",
+      text: `Your verification OTP is ${otp}. This code will expire in 10 minutes.`
+    });
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    exports.register = async (req, res) => {
+  try {
+    const { name, email, password } = req.body;
+
+    if (!name || !email || !password) {
+      return res.status(400).json({
+        success: false,
+        message: "Name, email and password are required",
+      });
+    }
+
+    const normalizedEmail = email.trim().toLowerCase();
+
+    const exists = await User.findOne({ email: normalizedEmail });
+    if (exists) {
+      return res.status(400).json({
+        success: false,
+        message: "Email already registered, try logging in"
+      });
+    }
+
+  
+
+
+
+
+
+
+try {
+    const otp = generateOTP();
+
+    // 1. Attempt to create the user in the database
+    const user = await User.create({
+      name: name.trim(),
+      email: normalizedEmail,
+      password: password, 
+      emailOTP: otp,
+      emailOTPExpires: Date.now() + 10 * 60 * 1000
+    });
+
+    // 2. Attempt to send the email
+    await sendEmail({
+      to: normalizedEmail,
+      subject: "Verify your email - ACCESS-TRAVEL NOREPLY",
+      text: `Your verification OTP is ${otp}. This code will expire in 10 minutes.`
+    });
+
+    // Success response
+    res.status(201).json({ message: "User registered. Please check your email for the OTP." });
+
+} catch (error) {
+    // 3. Handle specific errors (like duplicate emails)
+    if (error.code === 11000) {
+        return res.status(400).json({ error: "Email already exists." });
+    }
+
+    console.error("Registration Error:", error);
+    res.status(500).json({ error: "Internal server error during registration." });
+}
+
+
+
+
+
+
+
+
+
+
+
+    const token = jwt.sign(
+      { id: user._id, role: user.role },
+      process.env.JWT_SECRET,
+      { expiresIn: "7d" }
+    );
+
+    return res.status(201).json({
+      success: true,
+      message: "Registration successful. Please check your email to verify your account.",
+      token,
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role
+      }
+    });
+
+  } catch (error) {
+    console.error("Registration error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Registration failed. Please try again."
+    });
+  }
+};
+
+
+
+
+
+
+
+
+exports.register = async (req, res) => {
+  try {
+    const { name, email, password } = req.body;
+
+    if (!name || !email || !password) {
+      return res.status(400).json({
+        success: false,
+        message: "Name, email and password are required",
+      });
+    }
+
+    const normalizedEmail = email.trim().toLowerCase();
+
+    const exists = await User.findOne({ email: normalizedEmail });
+    if (exists) {
+      return res.status(400).json({
+        success: false,
+        message: "Email already registered, try logging in"
+      });
+    }
+    
+try {
+    const otp = generateOTP();
+
+    // 1. Attempt to create the user in the database
+    const user = await User.create({
+      name: name.trim(),
+      email: normalizedEmail,
+      password: password, 
+      emailOTP: otp,
+      emailOTPExpires: Date.now() + 10 * 60 * 1000
+    });
+
+    // 2. Attempt to send the email
+    await sendEmail({
+      to: normalizedEmail,
+      subject: "Verify your email - ACCESS-TRAVEL NOREPLY",
+      text: `Your verification OTP is ${otp}. This code will expire in 10 minutes.`
+    });
+
+    // Success response
+    res.status(201).json({ message: "User registered. Please check your email for the OTP." });
+
+} catch (error) {
+    // 3. Handle specific errors (like duplicate emails)
+    if (error.code === 11000) {
+        return res.status(400).json({ error: "Email already exists." });
+    }
+
+    console.error("Registration Error:", error);
+    res.status(500).json({ error: "Internal server error during registration." });
+}
+
+    const token = jwt.sign(
+      { id: user._id, role: user.role },
+      process.env.JWT_SECRET,
+      { expiresIn: "7d" }
+    );
+
+    return res.status(201).json({
+      success: true,
+      message: "Registration successful. Please check your email to verify your account.",
+      token,
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role
+      }
+    });
+
+  } catch (error) {
+    console.error("Registration error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Registration failed. Please try again."
+    });
+  }
+};
+
+
+
+
+
+
+const nodemailer = require("nodemailer");
+
+const sendEmail = async ({ to, subject, text }) => {
+  const transporter = nodemailer.createTransport({
+    host: process.env.EMAIL_HOST,
+    port: process.env.EMAIL_PORT,
+    secure: false,
+    auth: {
+      user: process.env.EMAIL_USER,
+      pass: process.env.EMAIL_PASS
+    }
+  });
+
+
+
+
+
+
+
+
+
+
+
+
+const token = jwt.sign(
+      { id: user._id, role: user.role },
+      process.env.JWT_SECRET,
+      { expiresIn: "7d" }
+    );
+
+    return res.status(201).json({
+      success: true,
+      message: "Registration successful. Please check your email to verify your account.",
+      token,
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role
+      }
+    });
+
+  } catch (error) {
+    console.error("Registration error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Registration failed. Please try again."
+    });
+  }
+};
+
+
+
+
+
+epsmdamtgdyacevm
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+exports.register = async (req, res) => {
+  try {
+    let { name, email, password } = req.body;
+
+    if (!name || !email || !password) {
+      return res.status(400).json({
+        success: false,
+        message: "Name, email and password are required",
+      });
+    }
+
+    name = name.trim();
+    email = email.trim().toLowerCase();
+
+    const exists = await User.findOne({ email });
+    if (exists) {
+      return res.status(400).json({
+        success: false,
+        message: "Email already registered",
+      });
+    }
+
+    const otp = generateOTP();
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    const user = await User.create({
+      name,
+      email,
+      password: hashedPassword,
+      emailOTP: otp,
+      emailOTPExpires: Date.now() + 10 * 60 * 1000,
+    });
+
+    try {
+      await sendEmail({
+        to: email,
+        subject: "Verify your email - ACCESS-TRAVEL",
+        text: `Your OTP is ${otp}. It expires in 10 minutes.`,
+      });
+    } catch (err) {
+      console.error("Email failed:", err.message);
+    }
+
+    const token = jwt.sign(
+      { id: user._id, role: user.role },
+      process.env.JWT_SECRET,
+      { expiresIn: "7d" }
+    );
+
+    return res.status(201).json({
+      success: true,
+      message: "Registration successful. Check your email for OTP '${otp}' .",
+      token,
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        emailOTP: user.emailOTP,
+      },
+    });
+  } catch (err) {
+    console.error("Register error:", err);
+    return res.status(500).json({
+      success: false,
+      message: "Registration failed",
+    });
+  }
+};
+
+
+
+
+
+
+
+
+
+
+
+
+
+const transporter = nodemailer.createTransport({
+    host: process.env.EMAIL_HOST,
+    port: Number(process.env.EMAIL_PORT),
+    secure: Number(process.env.EMAIL_PORT) === 465, // true only for 465
+    auth: {
+      user: process.env.EMAIL_USER,
+      pass: process.env.EMAIL_PASS,
+    },
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    const nodemailer = require("nodemailer");
+
+const sendEmail = async ({ to, subject, text }) => {
+  
+  
+  
+  
+  
+  const transporter = nodemailer.createTransport({
+  host: "bulk.smtp.mailtrap.io",
+  port: 587,
+  auth: {
+    user: "api",
+    pass: "5900250e79bd56e6cf4a5a644927f16c"
+  }
+});
+  
+  
+  
+  
+
+  // Verify transporter (important for deployment)
+  await transporter.verify();
+
+  await transporter.sendMail({
+    from: `"ACCESS-TRAVEL" <${process.env.EMAIL_USER}>`,
+    to,
+    subject,
+    text,
+  });
+};
+
+module.exports = sendEmail;
+
+
+
+
+
+
+
+
+
+
+
+const sgMail = require('@sendgrid/mail');
+
+// Generate 6-digit OTP
+
+// Send OTP email
+const sendOTPEmail = async (email, otp) => {
+  sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+
+  const msg = {
+    to: email,
+    from: process.env.SENDGRID_FROM_EMAIL,
+    subject: 'Your OTP Code - ACCESS-TRAVEL',
+    text: `Your OTP code is: ${otp}\n\nThis code will expire in 10 minutes.\n\nIf you didn't request this code, please ignore this email.`,
+    html: `
+      <div style="font-family: Arial, sans-serif; padding: 20px; max-width: 600px;">
+        <h2 style="color: #333;">Your OTP Code</h2>
+        <p>Your OTP code is:</p>
+        <div style="background: #f4f4f4; padding: 15px; text-align: center; border-radius: 5px;">
+          <span style="font-size: 32px; font-weight: bold; color: #007bff; letter-spacing: 5px;">${otp}</span>
+        </div>
+        <p style="margin-top: 20px;">This code will expire in <strong>10 minutes</strong>.</p>
+        <p style="color: #666; font-size: 14px;">If you didn't request this code, please ignore this email.</p>
+      </div>
+    `
+  };
+
+  try {
+    await sgMail.send(msg);
+    console.log('OTP email sent successfully to:', email);
+  } catch (error) {
+    console.error('SendGrid Error:', error);
+    if (error.response) {
+      console.error(error.response.body);
+    }
+    throw new Error('Failed to send OTP email');
+  }
+};
+
+module.exports = { sendOTPEmail };
+
+
+
+
+
+
+
+
+EMAIL_HOST=smtp.gmail.com
+EMAIL_PORT=587
+EMAIL_USER=aderetitaiwo614@gmail.com
+EMAIL_PASS=epsmdamtgdyacevm
+
+
+
+
+
+
+
+
+
+
+
+
+const sgMail = require('@sendgrid/mail');
+
+const sendOTPEmail = async (email, otp) => {
+  sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+
+  const msg = {
+    to: email,
+    from: {
+      email: process.env.SENDGRID_FROM_EMAIL,
+      name: "ACCESS-TRAVEL",
+    },
+    subject: 'Your OTP Code - ACCESS-TRAVEL',
+    text: `Your OTP code is ${otp}. It expires in 10 minutes.`,
+    html: `
+      <div style="font-family: Arial, sans-serif; padding: 20px; max-width: 600px;">
+        <h2>Your OTP Code</h2>
+        <p>Your OTP code is:</p>
+        <div style="background:#f4f4f4;padding:15px;text-align:center;border-radius:5px;">
+          <span style="font-size:32px;font-weight:bold;letter-spacing:5px;">${otp}</span>
+        </div>
+        <p>This code expires in <strong>10 minutes</strong>.</p>
+        <p style="color:#666;font-size:14px;">
+          If you didn't request this, ignore this email.
+        </p>
+      </div>
+    `,
+  };
+
+  try {
+    await sgMail.send(msg);
+    console.log('OTP email sent successfully to:', email);
+  } catch (error) {
+    console.error('SendGrid Error:', error);
+    if (error.response) {
+      console.error(error.response.body);
+    }
+    throw new Error('Failed to send OTP email');
+  }
+};
+
+
+
+
+
+
+module.exports = sendOTPEmail;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+const User = require("../models/User");
+const bcrypt = require("bcryptjs");
+const jwt = require("jsonwebtoken");
+const sendEmail = require("../utils/sendEmail");
+
+const generateOTP = () =>
+  Math.floor(100000 + Math.random() * 900000).toString();
+
+/* ================= REGISTER ================= */
+exports.register = async (req, res) => {
+  try {
+    let { name, email, password } = req.body;
+
+    if (!name || !email || !password) {
+      return res.status(400).json({
+        success: false,
+        message: "Name, email and password are required",
+      });
+    }
+
+    name = name.trim();
+    email = email.trim().toLowerCase();
+
+    const exists = await User.findOne({ email });
+    if (exists) {
+      return res.status(400).json({
+        success: false,
+        message: "Email already registered",
+      });
+    }
+
+    const otp = generateOTP();
+
+    const user = await User.create({
+      name,
+      email,
+      password,
+      emailOTP: otp,
+      emailOTPExpires: Date.now() + 10 * 60 * 1000,
+    });
+
+    try {
+      await sendEmail({
+        to: email,
+        subject: "Verify your email - ACCESS-TRAVEL",
+        text: ` Your OTP code is: ${otp}\n\nThis code will expire in 10 minutes.\n\nIf you didn't request this code, please ignore this email.`,
+      });
+    } catch (err) {
+      console.error("Email failed:", err.message);
+    }
+
+    const token = jwt.sign(
+      { id: user._id, role: user.role },
+      process.env.JWT_SECRET,
+      { expiresIn: "7d" }
+    );
+
+    return res.status(201).json({
+      success: true,
+      message: "Registration successful. Check your email for OTP.",
+      token,
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+      },
+    });
+  } catch (err) {
+    console.error("Register error:", err);
+    return res.status(500).json({
+      success: false,
+      message: "Registration failed",
+    });
+  }
+};
+
+/* ================= VERIFY EMAIL ================= */
+exports.verifyEmail = async (req, res) => {
+  try {
+    let { email, otp } = req.body;
+
+    if (!email || !otp) {
+      return res.status(400).json({
+        success: false,
+        message: "Email and OTP are required",
+      });
+    }
+
+    email = email.trim().toLowerCase();
+
+    const user = await User.findOne({
+      email,
+      emailOTP: otp,
+      emailOTPExpires: { $gt: Date.now() },
+    });
+
+    if (!user) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid or expired OTP",
+      });
+    }
+
+    user.isEmailVerified = true;
+    user.emailOTP = undefined;
+    user.emailOTPExpires = undefined;
+    await user.save();
+
+    return res.json({
+      success: true,
+      message: "Email verified successfully",
+    });
+  } catch (err) {
+    console.error("Verify error:", err);
+    return res.status(500).json({
+      success: false,
+      message: "Verification failed",
+    });
+  }
+};
+
+/* ================= LOGIN ================= */
+exports.login = async (req, res) => {
+  try {
+    let { email, password } = req.body;
+
+    if (!email || !password) {
+      return res.status(400).json({
+        success: false,
+        message: "Email and password are required",
+      });
+    }
+
+    email = email.trim().toLowerCase();
+
+    const user = await User.findOne({ email }).select("+password");
+
+    if (!user || !user.isEmailVerified) {
+      return res.status(401).json({
+        success: false,
+        message: "Invalid credentials or email not verified",
+      });
+    }
+
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
+      return res.status(401).json({
+        success: false,
+        message: "Invalid credentials",
+      });
+    }
+
+    const token = jwt.sign(
+      { id: user._id, role: user.role },
+      process.env.JWT_SECRET,
+      { expiresIn: "7d" }
+    );
+
+    return res.json({
+      success: true,
+      message: "Login successful",
+      token,
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        isEmailVerified: user.isEmailVerified,
+      },
+    });
+  } catch (err) {
+    console.error("Login error:", err);
+    return res.status(500).json({
+      success: false,
+      message: "Login failed",
+    });
+  }
+};
+
+/* ================= ME ================= */
+exports.me = async (req, res) => {
+  return res.json({
+    success: true,
+    user: req.user,
+  });
+};
+
+/* ================= FORGOT PASSWORD ================= */
+exports.forgotPassword = async (req, res) => {
+  try {
+    let { email } = req.body;
+    if (!email) {
+      return res.status(400).json({
+        success: false,
+        message: "Email is required",
+      });
+    }
+
+    email = email.trim().toLowerCase();
+    const user = await User.findOne({ email });
+
+    if (user) {
+      const otp = generateOTP();
+      user.resetPasswordOTP = otp;
+      user.resetPasswordExpires = Date.now() + 10 * 60 * 1000;
+      await user.save();
+
+      await sendEmail({
+        to: email,
+        subject: "Password Reset OTP",
+        text: `Your OTP is ${otp}. It expires in 10 minutes.`,
+      });
+    }
+
+    return res.json({
+      success: true,
+      message: "If that email exists, an OTP has been sent",
+    });
+  } catch (err) {
+    console.error("Forgot password error:", err);
+    return res.status(500).json({
+      success: false,
+      message: "Request failed",
+    });
+  }
+};
+
+/* ================= RESET PASSWORD ================= */
+exports.resetPassword = async (req, res) => {
+  try {
+    let { email, otp, newPassword } = req.body;
+
+    if (!email || !otp || !newPassword) {
+      return res.status(400).json({
+        success: false,
+        message: "All fields are required",
+      });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({
+        success: false,
+        message: "Password must be at least 6 characters",
+      });
+    }
+
+    email = email.trim().toLowerCase();
+
+    const user = await User.findOne({
+      email,
+      resetPasswordOTP: otp,
+      resetPasswordExpires: { $gt: Date.now() },
+    });
+
+    if (!user) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid or expired OTP",
+      });
+    }
+
+    user.password = newPassword;
+    user.resetPasswordOTP = undefined;
+    user.resetPasswordExpires = undefined;
+    await user.save();
+
+    return res.json({
+      success: true,
+      message: "Password reset successful",
+    });
+  } catch (err) {
+    console.error("Reset password error:", err);
+    return res.status(500).json({
+      success: false,
+      message: "Reset failed",
+    });
+  }
+};

@@ -52,6 +52,15 @@ const sendOTPEmail = async (email, otp) => {
 };
 
 /* ================= REGISTER ================= */
+
+      
+
+
+
+
+
+
+
 exports.register = async (req, res) => {
   try {
     let { name, email, password } = req.body;
@@ -117,6 +126,16 @@ exports.register = async (req, res) => {
     });
   }
 };
+
+
+
+
+
+
+
+
+
+
 
 /* ================= VERIFY EMAIL ================= */
 exports.verifyEmail = async (req, res) => {
@@ -275,7 +294,7 @@ exports.resetPassword = async (req, res) => {
   try {
     let { email, otp, newPassword } = req.body;
 
-    if (!email || !otp || !newPassword) {
+    if (!email || !newPassword) {
       return res.status(400).json({
         success: false,
         message: "All fields are required",

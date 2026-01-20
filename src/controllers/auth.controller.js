@@ -1,13 +1,4 @@
 
-
-
-
-
-
-
-
-
-
 const User = require("../models/User");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
@@ -20,6 +11,34 @@ const generateOTP = () =>
   Math.floor(100000 + Math.random() * 900000).toString();
 
 // Send OTP email function
+// const sendOTPEmail = async (email, otp) => {
+//   const msg = {
+//     to: email,
+//     from: process.env.SENDGRID_FROM_EMAIL,
+//     subject: 'Your OTP Code - ACCESS-TRAVEL',
+//     text: `Your OTP code is: ${otp}\n\nThis code will expire in 10 minutes.\n\nIf you didn't request this code, please ignore this email.`,
+//     html: `
+//       <div style="font-family: Arial, sans-serif; padding: 20px; max-width: 600px;">
+//         <h2 style="color: #333;">Your OTP Code</h2>
+//         <p>Your OTP code is:</p>
+//         <div style="background: #f4f4f4; padding: 15px; text-align: center; border-radius: 5px;">
+//           <span style="font-size: 32px; font-weight: bold; color: #007bff; letter-spacing: 5px;">${otp}</span>
+//         </div>
+//         <p style="margin-top: 20px;">This code will expire in <strong>10 minutes</strong>.</p>
+//         <p style="color: #666; font-size: 14px;">If you didn't request this code, please ignore this email.</p>
+//       </div>
+//     `
+//   }
+// };
+  
+
+
+
+
+
+
+
+//Send OTP email function
 const sendOTPEmail = async (email, otp) => {
   const msg = {
     to: email,
@@ -40,27 +59,18 @@ const sendOTPEmail = async (email, otp) => {
   };
 
   try {
+    console.log('Attempting to send email to:', email);
+    console.log('From:', process.env.SENDGRID_FROM_EMAIL);
+    console.log('SendGrid API Key exists:', !!process.env.SENDGRID_API_KEY);
+    
     await sgMail.send(msg);
-    console.log('OTP email sent successfully to:', email);
+    console.log('✅ Email sent successfully to:', email);
   } catch (error) {
-    console.error('SendGrid Error:', error);
-    if (error.response) {
-      console.error(error.response.body);
-    }
-    throw new Error('Failed to send OTP email');
+    console.error('❌ SendGrid Error:', error.response?.body || error.message);
+    throw error;
   }
 };
-
 /* ================= REGISTER ================= */
-
-      
-
-
-
-
-
-
-
 exports.register = async (req, res) => {
   try {
     let { name, email, password } = req.body;
@@ -126,16 +136,6 @@ exports.register = async (req, res) => {
     });
   }
 };
-
-
-
-
-
-
-
-
-
-
 
 /* ================= VERIFY EMAIL ================= */
 exports.verifyEmail = async (req, res) => {
@@ -294,7 +294,7 @@ exports.resetPassword = async (req, res) => {
   try {
     let { email, otp, newPassword } = req.body;
 
-    if (!email || !newPassword) {
+    if (!email || !otp || !newPassword) {
       return res.status(400).json({
         success: false,
         message: "All fields are required",
@@ -339,4 +339,4 @@ exports.resetPassword = async (req, res) => {
       message: "Reset failed",
     });
   }
-};
+  };

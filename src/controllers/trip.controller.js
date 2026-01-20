@@ -1,6 +1,12 @@
 const Trip = require("../models/Trip");
 const TripStop = require("../models/TripStop");
-const accessibilityProfile = require("../models/accessibilityProfile.model.js");
+
+
+const AccessibilityProfile = require("../models/accessibilityProfile.model.js");
+
+
+
+
 const {
   findAccessiblePlaces,
 } = require("../services/tripPlanner.service");

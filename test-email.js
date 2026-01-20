@@ -1,19 +1,19 @@
 require('dotenv').config();
-const sendEmail = require('./src/utils/sendEmail'); // Adjust path if needed
+const sgMail = require('@sendgrid/mail');
 
-const test = async () => {
-  try {
-    console.log("Attempting to send test email...");
-    await sendEmail({
-      to: "elusive4dev@gmail.com", 
-      subject: "SMTP Test",
-      text: "If you see this, your email config is working!"
-    });
-    console.log("✅ Email sent successfully!");
-  } catch (error) {
-    console.error("❌ Email failed!");
-    console.error(error);
-  }
+sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+
+const msg = {
+  to: 'aderetitaiwo614@gmail.com', // Change this to your email
+  from: process.env.SENDGRID_FROM_EMAIL,
+  subject: 'Test Email',
+  text: 'If you receive this, SendGrid is working!',
 };
 
-test();
+sgMail.send(msg)
+  .then(() => {
+    console.log('✅ Email sent successfully!');
+  })
+  .catch((error) => {
+    console.error('❌ Error:', error.response?.body || error);
+  });
